@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, session } from "electron";
 import {
   checkDirectories,
   isDev,
@@ -20,6 +20,15 @@ app.on("ready", () => {
   startServer();
   createTray();
   ipcMainEvents(mainWindow);
+
+  // Set up media permissions for webcam
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
 
   mainWindow.on("close", () => {
     closeAllWindows();

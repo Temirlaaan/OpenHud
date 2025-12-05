@@ -1,13 +1,12 @@
 import { Router } from "express";
+import { getWebcamSettingsHandler, updateWebcamSettingsHandler } from "./cameras.controller.js";
 
 export const cameraRoutes = Router();
 
 /* ================== GETs ===================== */
-cameraRoutes.get("/", (req, res) => {
-  // Return an empty array of available players to satisfy the hud
-  res.send({ availablePlayers: [] });
-});
+cameraRoutes.get("/settings", getWebcamSettingsHandler);
 
 /* ================== POSTs ===================== */
 
 /* ================== PUTs ===================== */
+cameraRoutes.put("/settings", updateWebcamSettingsHandler);
