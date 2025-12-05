@@ -31,6 +31,9 @@ export function createHudWindow() {
   hudWindow.loadURL("http://" + apiUrl + "/api/hud");
   hudWindow.setIgnoreMouseEvents(true);
 
+  // Open DevTools for debugging
+  hudWindow.webContents.openDevTools();
+
   // Focus the HUD window a short time after it's shown to ensure it goes on top.
   hudWindow.on("show", () => {
     setTimeout(() => {
