@@ -46,6 +46,7 @@ interface Player {
   country: string;
   steamid: string;
   team: string;
+  vdoNinjaUrl?: string;
   extra: Record<string, string>;
 }
 

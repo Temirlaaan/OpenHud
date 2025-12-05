@@ -104,8 +104,8 @@ export const selectAvatarURL = (steamid: string): Promise<string> => {
  */
 export const insert = (player: Player) => {
   return new Promise((resolve, reject) => {
-    const statement = `INSERT INTO players (_id, firstName, lastName, username, avatar, country, steamid, team, extra)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const statement = `INSERT INTO players (_id, firstName, lastName, username, avatar, country, steamid, team, vdoNinjaUrl, extra)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     database.run(
       statement,
       [
@@ -117,6 +117,7 @@ export const insert = (player: Player) => {
         player.country,
         player.steamid,
         player.team || null, // Convert empty string to null for foreign key
+        player.vdoNinjaUrl || null,
         player.extra,
       ],
       (error: Error) => {
@@ -139,7 +140,7 @@ export const insert = (player: Player) => {
 export const update = (player: Player) => {
   return new Promise((resolve, reject) => {
     const statement =
-      "UPDATE players SET firstName = ?, lastName = ?, username = ?, avatar = ?, country = ?, steamid = ?, team = ?, extra = ? WHERE _id = ?";
+      "UPDATE players SET firstName = ?, lastName = ?, username = ?, avatar = ?, country = ?, steamid = ?, team = ?, vdoNinjaUrl = ?, extra = ? WHERE _id = ?";
     database.run(
       statement,
       [
@@ -150,6 +151,7 @@ export const update = (player: Player) => {
         player.country,
         player.steamid,
         player.team || null, // Convert empty string to null for foreign key
+        player.vdoNinjaUrl || null,
         player.extra,
         player._id,
       ],

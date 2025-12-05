@@ -37,6 +37,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
   const [steamId, setSteamId] = useState("");
   const [team, setTeam] = useState("");
   const [country, setCountry] = useState("");
+  const [vdoNinjaUrl, setVdoNinjaUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [usernameError, setUsernameError] = useState("");
   const [steamIdError, setSteamIdError] = useState("");
@@ -52,6 +53,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
       setTeam(selectedPlayer.team || "");
       setCountry(selectedPlayer.country || "");
       setAvatar(selectedPlayer.avatar || "");
+      setVdoNinjaUrl(selectedPlayer.vdoNinjaUrl || "");
     } else if (open && prefill) {
       // Creating a new player with prefilled values
       setUsername(prefill.username || "");
@@ -62,6 +64,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
       setCountry("");
       setAvatar("");
       setAvatarFile(null);
+      setVdoNinjaUrl("");
       setUsernameError("");
       setSteamIdError("");
       setSteamIdFormatError("");
@@ -75,6 +78,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
       setSteamId("");
       setTeam("");
       setCountry("");
+      setVdoNinjaUrl("");
       setUsernameError("");
       setSteamIdError("");
       setSteamIdFormatError("");
@@ -119,6 +123,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
     formData.append("steamid", steamId);
     formData.append("team", team);
     formData.append("country", country);
+    formData.append("vdoNinjaUrl", vdoNinjaUrl);
     if (avatarFile) {
       formData.append("avatar", avatarFile); // Append the file
     } else if (selectedPlayer?.avatar) {
@@ -155,6 +160,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
     setSteamId("");
     setTeam("");
     setCountry("");
+    setVdoNinjaUrl("");
     setUsernameError("");
     setSteamIdError("");
     setSteamIdFormatError("");
@@ -232,6 +238,16 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="col-span-2">
+            <TextInput
+              label="VDO.Ninja URL (для камеры игрока)"
+              value={vdoNinjaUrl}
+              onChange={(e) => setVdoNinjaUrl(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Пример: https://vdo.ninja/?view=player1&scene&cleanoutput
+            </p>
           </div>
           <div>
             <label

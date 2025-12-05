@@ -71,6 +71,16 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
     END;
   `);
 
+    /* Add vdoNinjaUrl column to players table if it doesn't exist */
+    database.run(
+      `ALTER TABLE players ADD COLUMN vdoNinjaUrl TEXT`,
+      (error) => {
+        if (error && !error.message.includes("duplicate column")) {
+          console.error("Error adding vdoNinjaUrl column:", error.message);
+        }
+      }
+    );
+
     /* Create matches table */
     database.run(
       `CREATE TABLE IF NOT EXISTS matches (
