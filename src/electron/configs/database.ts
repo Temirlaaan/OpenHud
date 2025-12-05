@@ -140,49 +140,5 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
     END;
   `);
 
-    /* Create webcam_settings table */
-    database.run(
-      `CREATE TABLE IF NOT EXISTS webcam_settings (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        enabled INTEGER DEFAULT 0 CHECK (enabled IN (0, 1)),
-        deviceId TEXT,
-        width INTEGER DEFAULT 320,
-        height INTEGER DEFAULT 240,
-        positionX INTEGER DEFAULT 20,
-        positionY INTEGER DEFAULT 20,
-        borderRadius INTEGER DEFAULT 8,
-        opacity REAL DEFAULT 1.0 CHECK (opacity >= 0.0 AND opacity <= 1.0),
-        borderColor TEXT DEFAULT '#ffffff',
-        borderWidth INTEGER DEFAULT 2,
-        zIndex INTEGER DEFAULT 1000,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`,
-      (error) => {
-        if (error) {
-          console.error("Error creating webcam_settings table:", error.message);
-        } else {
-          // Insert default settings if table is empty
-          database.run(
-            `INSERT OR IGNORE INTO webcam_settings (id, enabled, deviceId, width, height, positionX, positionY, borderRadius, opacity, borderColor, borderWidth, zIndex)
-             VALUES (1, 0, NULL, 320, 240, 20, 20, 8, 1.0, '#ffffff', 2, 1000)`,
-            (insertError) => {
-              if (insertError) {
-                console.error("Error inserting default webcam settings:", insertError.message);
-              }
-            }
-          );
-        }
-      },
-    );
-
-    database.run(`
-    CREATE TRIGGER IF NOT EXISTS update_webcam_settings_updatedAt
-    AFTER UPDATE ON webcam_settings
-    FOR EACH ROW
-    BEGIN
-        UPDATE webcam_settings SET updatedAt = CURRENT_TIMESTAMP WHERE id = OLD.id;
-    END;
-  `);
   });
 });

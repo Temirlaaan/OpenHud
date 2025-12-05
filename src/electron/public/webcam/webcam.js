@@ -1,199 +1,223 @@
-// Webcam Overlay for OpenHud
+// VDO.Ninja Camera Overlay for OpenHud with GSI Integration
 (function () {
-  let webcamSettings = null;
-  let videoElement = null;
-  let containerElement = null;
-  let mediaStream = null;
-  let isDragging = false;
-  let dragOffset = { x: 0, y: 0 };
-
   const API_URL = "http://localhost:1349";
+
+  let currentPlayerSteamId = null;
+  let currentVdoUrl = null;
+  let iframeElement = null;
+  let containerElement = null;
+  let playersCache = {};
+  let isTransitioning = false;
 
   // Initialize Socket.io client
   const socket = io(API_URL);
 
   socket.on("connect", () => {
-    console.log("Webcam overlay connected to server");
-    fetchSettings();
+    console.log("[VDO.Ninja Camera] Connected to server");
+    loadPlayers();
   });
 
-  socket.on("webcamSettingsUpdated", (settings) => {
-    console.log("Webcam settings updated:", settings);
-    webcamSettings = settings;
-    updateWebcam();
+  // Listen for GSI updates (observer slot changes)
+  socket.on("update", (gsiData) => {
+    handleGSIUpdate(gsiData);
   });
 
-  async function fetchSettings() {
+  // Load all players and cache their VDO.Ninja URLs
+  async function loadPlayers() {
     try {
-      const response = await fetch(`${API_URL}/api/camera/settings`);
-      webcamSettings = await response.json();
-      console.log("Fetched webcam settings:", webcamSettings);
-      updateWebcam();
+      const response = await fetch(`${API_URL}/api/players`);
+      const players = await response.json();
+
+      console.log("[VDO.Ninja Camera] Loaded players:", players);
+
+      // Cache steamid -> vdoNinjaUrl mapping
+      players.forEach(player => {
+        if (player.steamid && player.vdoNinjaUrl) {
+          playersCache[player.steamid] = {
+            username: player.username,
+            vdoNinjaUrl: player.vdoNinjaUrl
+          };
+        }
+      });
+
+      console.log("[VDO.Ninja Camera] Players cache:", playersCache);
     } catch (error) {
-      console.error("Error fetching webcam settings:", error);
+      console.error("[VDO.Ninja Camera] Error loading players:", error);
     }
   }
 
-  async function startWebcam() {
-    if (!webcamSettings || !webcamSettings.enabled) {
-      stopWebcam();
+  // Handle GSI data updates
+  function handleGSIUpdate(data) {
+    if (!data || !data.player || !data.allplayers) return;
+
+    const observerSlot = data.player.observer_slot;
+
+    if (observerSlot === undefined || observerSlot === null) return;
+
+    // Find player by observer_slot in allplayers
+    const observedPlayer = Object.entries(data.allplayers).find(
+      ([steamid, playerData]) => playerData.observer_slot === observerSlot
+    );
+
+    if (!observedPlayer) {
+      // No player in this slot, hide camera
+      hideCamera();
       return;
     }
 
-    try {
-      const constraints = {
-        video: {
-          width: { ideal: webcamSettings.width },
-          height: { ideal: webcamSettings.height },
-          frameRate: { ideal: 30, max: 30 },
-        },
-      };
+    const [steamid, playerData] = observedPlayer;
 
-      if (webcamSettings.deviceId) {
-        constraints.video.deviceId = { exact: webcamSettings.deviceId };
-      }
-
-      mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (!videoElement) {
-        createWebcamElement();
-      }
-
-      videoElement.srcObject = mediaStream;
-      videoElement.play();
-
-      applySettings();
-    } catch (error) {
-      console.error("Error starting webcam:", error);
-      showError("Camera access denied or unavailable");
+    // Check if we switched to a different player
+    if (steamid !== currentPlayerSteamId) {
+      console.log(`[VDO.Ninja Camera] Observer switched to player: ${playerData.name} (${steamid})`);
+      switchToPlayer(steamid);
     }
   }
 
-  function createWebcamElement() {
-    // Create container
-    containerElement = document.createElement("div");
-    containerElement.id = "webcam-overlay-container";
-    containerElement.style.cssText = `
-      position: fixed;
-      cursor: move;
-      user-select: none;
-      -webkit-user-select: none;
-    `;
+  // Switch camera to a different player
+  function switchToPlayer(steamid) {
+    const playerInfo = playersCache[steamid];
 
-    // Create video element
-    videoElement = document.createElement("video");
-    videoElement.id = "webcam-overlay-video";
-    videoElement.autoplay = true;
-    videoElement.muted = true;
-    videoElement.playsInline = true;
-    videoElement.style.cssText = `
-      display: block;
+    if (!playerInfo || !playerInfo.vdoNinjaUrl) {
+      console.log(`[VDO.Ninja Camera] No VDO.Ninja URL for player ${steamid}`);
+      hideCamera();
+      return;
+    }
+
+    currentPlayerSteamId = steamid;
+    const newUrl = playerInfo.vdoNinjaUrl;
+
+    if (newUrl === currentVdoUrl) {
+      // Same URL, just ensure camera is visible
+      showCamera();
+      return;
+    }
+
+    console.log(`[VDO.Ninja Camera] Switching to ${playerInfo.username}: ${newUrl}`);
+    currentVdoUrl = newUrl;
+
+    // Fade out, switch, fade in
+    fadeOutThenSwitch(newUrl);
+  }
+
+  // Create or get camera container
+  function getOrCreateContainer() {
+    if (!containerElement) {
+      containerElement = document.createElement("div");
+      containerElement.id = "vdo-ninja-camera-container";
+      containerElement.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 320px;
+        height: 240px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+        display: none;
+      `;
+      document.body.appendChild(containerElement);
+    }
+    return containerElement;
+  }
+
+  // Create iframe for VDO.Ninja
+  function createIframe(url) {
+    const iframe = document.createElement("iframe");
+    iframe.src = url;
+    iframe.style.cssText = `
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      border: none;
+      display: block;
     `;
-
-    containerElement.appendChild(videoElement);
-    document.body.appendChild(containerElement);
-
-    // Add drag functionality
-    containerElement.addEventListener("mousedown", startDrag);
-    document.addEventListener("mousemove", drag);
-    document.addEventListener("mouseup", stopDrag);
+    iframe.allow = "camera; microphone; autoplay; display-capture; fullscreen";
+    iframe.allowFullscreen = true;
+    return iframe;
   }
 
-  function startDrag(e) {
-    if (!containerElement) return;
-    isDragging = true;
-    const rect = containerElement.getBoundingClientRect();
-    dragOffset.x = e.clientX - rect.left;
-    dragOffset.y = e.clientY - rect.top;
-    containerElement.style.cursor = "grabbing";
-  }
+  // Fade out, switch URL, fade in
+  function fadeOutThenSwitch(newUrl) {
+    if (isTransitioning) return;
 
-  function drag(e) {
-    if (!isDragging || !containerElement) return;
-    const x = e.clientX - dragOffset.x;
-    const y = e.clientY - dragOffset.y;
-    containerElement.style.left = `${x}px`;
-    containerElement.style.top = `${y}px`;
-  }
+    const container = getOrCreateContainer();
+    isTransitioning = true;
 
-  function stopDrag() {
-    if (!containerElement) return;
-    isDragging = false;
-    containerElement.style.cursor = "move";
-  }
+    if (container.style.display === "block" && container.style.opacity === "1") {
+      // Fade out current camera
+      container.style.opacity = "0";
 
-  function applySettings() {
-    if (!containerElement || !videoElement || !webcamSettings) return;
+      setTimeout(() => {
+        // Remove old iframe
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
 
-    containerElement.style.width = `${webcamSettings.width}px`;
-    containerElement.style.height = `${webcamSettings.height}px`;
-    containerElement.style.left = `${webcamSettings.positionX}px`;
-    containerElement.style.top = `${webcamSettings.positionY}px`;
-    containerElement.style.borderRadius = `${webcamSettings.borderRadius}px`;
-    containerElement.style.opacity = webcamSettings.opacity;
-    containerElement.style.border = `${webcamSettings.borderWidth}px solid ${webcamSettings.borderColor}`;
-    containerElement.style.zIndex = webcamSettings.zIndex;
-    containerElement.style.overflow = "hidden";
-    containerElement.style.display = webcamSettings.enabled ? "block" : "none";
-  }
+        // Create new iframe
+        iframeElement = createIframe(newUrl);
+        container.appendChild(iframeElement);
 
-  function stopWebcam() {
-    if (mediaStream) {
-      mediaStream.getTracks().forEach((track) => track.stop());
-      mediaStream = null;
-    }
-
-    if (videoElement) {
-      videoElement.srcObject = null;
-    }
-
-    if (containerElement) {
-      containerElement.style.display = "none";
-    }
-  }
-
-  function showError(message) {
-    console.error("Webcam error:", message);
-    if (containerElement) {
-      containerElement.innerHTML = `
-        <div style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.8);
-          color: white;
-          font-family: Arial, sans-serif;
-          font-size: 12px;
-          text-align: center;
-          padding: 10px;
-        ">
-          ${message}
-        </div>
-      `;
-    }
-  }
-
-  function updateWebcam() {
-    if (webcamSettings && webcamSettings.enabled) {
-      startWebcam();
+        // Fade in new camera
+        setTimeout(() => {
+          container.style.opacity = "1";
+          isTransitioning = false;
+        }, 100);
+      }, 500); // Wait for fade out
     } else {
-      stopWebcam();
+      // No camera currently shown, just show new one
+      container.style.display = "block";
+
+      // Remove old iframe if any
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+
+      // Create new iframe
+      iframeElement = createIframe(newUrl);
+      container.appendChild(iframeElement);
+
+      // Fade in
+      setTimeout(() => {
+        container.style.opacity = "1";
+        isTransitioning = false;
+      }, 100);
     }
+  }
+
+  // Show camera (without switching)
+  function showCamera() {
+    const container = getOrCreateContainer();
+    if (container.style.display === "none") {
+      container.style.display = "block";
+      setTimeout(() => {
+        container.style.opacity = "1";
+      }, 100);
+    }
+  }
+
+  // Hide camera
+  function hideCamera() {
+    if (!containerElement) return;
+
+    containerElement.style.opacity = "0";
+    setTimeout(() => {
+      containerElement.style.display = "none";
+      currentPlayerSteamId = null;
+      currentVdoUrl = null;
+    }, 500);
   }
 
   // Cleanup on page unload
   window.addEventListener("beforeunload", () => {
-    stopWebcam();
     if (socket) {
       socket.disconnect();
     }
   });
 
   // Initialize
-  console.log("Webcam overlay script loaded");
+  console.log("[VDO.Ninja Camera] Script loaded and ready");
 })();

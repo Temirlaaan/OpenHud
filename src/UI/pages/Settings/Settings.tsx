@@ -1,5 +1,4 @@
 import { ButtonContained } from "../../components";
-import { WebcamSettingsComponent } from "./components/WebcamSettings";
 
 export const Settings = () => {
 
@@ -13,8 +12,6 @@ export const Settings = () => {
             Open Directory
           </ButtonContained>
         </div>
-
-        <WebcamSettingsComponent />
       </div>
     </div>
   );
