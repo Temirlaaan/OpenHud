@@ -2,6 +2,7 @@ export interface WebcamSettings {
   id: number;
   enabled: boolean;
   deviceId: string | null;
+  vdoNinjaUrl: string | null;
   width: number;
   height: number;
   positionX: number;
@@ -24,6 +25,7 @@ export interface WebcamDevice {
 export interface UpdateWebcamSettingsRequest {
   enabled?: boolean;
   deviceId?: string | null;
+  vdoNinjaUrl?: string | null;
   width?: number;
   height?: number;
   positionX?: number;

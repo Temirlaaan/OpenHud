@@ -1,11 +1,13 @@
 // Webcam Overlay for OpenHud
-// Positions webcam over the observed player's avatar
+// Positions webcam/VDO.ninja stream over the observed player's avatar
 (function () {
   let webcamSettings = null;
   let videoElement = null;
+  let iframeElement = null;
   let containerElement = null;
   let mediaStream = null;
   let positionUpdateInterval = null;
+  let currentMode = null; // 'local' or 'vdo'
 
   const API_URL = "http://localhost:1349";
 
@@ -43,6 +45,69 @@
       return;
     }
 
+    // Determine mode: VDO.ninja or local camera
+    const useVdo = webcamSettings.vdoNinjaUrl && webcamSettings.vdoNinjaUrl.trim() !== "";
+
+    // If mode changed, clean up old elements
+    if (currentMode && currentMode !== (useVdo ? "vdo" : "local")) {
+      cleanupElements();
+    }
+
+    currentMode = useVdo ? "vdo" : "local";
+
+    if (useVdo) {
+      await startVdoNinja();
+    } else {
+      await startLocalCamera();
+    }
+
+    // Start tracking avatar position
+    startPositionTracking();
+  }
+
+  async function startVdoNinja() {
+    if (!containerElement) {
+      createContainerElement();
+    }
+
+    // Remove video element if exists
+    if (videoElement) {
+      videoElement.remove();
+      videoElement = null;
+    }
+
+    // Create or update iframe
+    if (!iframeElement) {
+      iframeElement = document.createElement("iframe");
+      iframeElement.id = "webcam-overlay-iframe";
+      iframeElement.allow = "camera;microphone;autoplay;display-capture";
+      iframeElement.style.cssText = `
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 50%;
+        pointer-events: none;
+      `;
+      containerElement.appendChild(iframeElement);
+    }
+
+    // Set iframe source
+    iframeElement.src = webcamSettings.vdoNinjaUrl;
+    console.log("VDO.ninja iframe loaded:", webcamSettings.vdoNinjaUrl);
+  }
+
+  async function startLocalCamera() {
+    if (!containerElement) {
+      createContainerElement();
+    }
+
+    // Remove iframe if exists
+    if (iframeElement) {
+      iframeElement.remove();
+      iframeElement = null;
+    }
+
     try {
       const constraints = {
         video: {
@@ -59,22 +124,32 @@
       mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
 
       if (!videoElement) {
-        createWebcamElement();
+        videoElement = document.createElement("video");
+        videoElement.id = "webcam-overlay-video";
+        videoElement.autoplay = true;
+        videoElement.muted = true;
+        videoElement.playsInline = true;
+        videoElement.style.cssText = `
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 50%;
+          transform: scaleX(-1);
+        `;
+        containerElement.appendChild(videoElement);
       }
 
       videoElement.srcObject = mediaStream;
       videoElement.play();
-
-      // Start tracking avatar position
-      startPositionTracking();
+      console.log("Local camera started");
     } catch (error) {
-      console.error("Error starting webcam:", error);
+      console.error("Error starting local camera:", error);
       showError("Camera access denied");
     }
   }
 
-  function createWebcamElement() {
-    // Create container
+  function createContainerElement() {
     containerElement = document.createElement("div");
     containerElement.id = "webcam-overlay-container";
     containerElement.style.cssText = `
@@ -85,24 +160,22 @@
       overflow: hidden;
       display: none;
     `;
-
-    // Create video element
-    videoElement = document.createElement("video");
-    videoElement.id = "webcam-overlay-video";
-    videoElement.autoplay = true;
-    videoElement.muted = true;
-    videoElement.playsInline = true;
-    videoElement.style.cssText = `
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
-      transform: scaleX(-1);
-    `;
-
-    containerElement.appendChild(videoElement);
     document.body.appendChild(containerElement);
+  }
+
+  function cleanupElements() {
+    if (videoElement) {
+      videoElement.remove();
+      videoElement = null;
+    }
+    if (iframeElement) {
+      iframeElement.remove();
+      iframeElement = null;
+    }
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((track) => track.stop());
+      mediaStream = null;
+    }
   }
 
   function startPositionTracking() {
@@ -148,14 +221,8 @@
       positionUpdateInterval = null;
     }
 
-    if (mediaStream) {
-      mediaStream.getTracks().forEach((track) => track.stop());
-      mediaStream = null;
-    }
-
-    if (videoElement) {
-      videoElement.srcObject = null;
-    }
+    cleanupElements();
+    currentMode = null;
 
     if (containerElement) {
       containerElement.style.display = "none";
@@ -203,5 +270,5 @@
   });
 
   // Initialize
-  console.log("Webcam overlay script loaded - will overlay on observed player avatar");
+  console.log("Webcam overlay script loaded - supports VDO.ninja and local camera");
 })();

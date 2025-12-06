@@ -5,6 +5,7 @@ interface WebcamSettings {
   id: number;
   enabled: boolean;
   deviceId: string | null;
+  vdoNinjaUrl: string | null;
   width: number;
   height: number;
   positionX: number;
@@ -21,6 +22,7 @@ export const WebcamSettingsComponent = () => {
     id: 1,
     enabled: false,
     deviceId: null,
+    vdoNinjaUrl: null,
     width: 320,
     height: 240,
     positionX: 20,
@@ -129,15 +131,33 @@ export const WebcamSettingsComponent = () => {
         </div>
 
         <div>
+          <label htmlFor="vdoNinjaUrl" className="mb-2 block font-medium text-text">
+            VDO.ninja URL (optional - overrides local camera)
+          </label>
+          <input
+            type="text"
+            id="vdoNinjaUrl"
+            value={settings.vdoNinjaUrl || ""}
+            onChange={(e) => handleChange("vdoNinjaUrl", e.target.value || null)}
+            placeholder="https://vdo.ninja/?view=..."
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-text placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            disabled={!settings.enabled}
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            If set, this URL will be used instead of local camera. Get the URL from VDO.ninja.
+          </p>
+        </div>
+
+        <div>
           <label htmlFor="deviceId" className="mb-2 block font-medium text-text">
-            Camera Device
+            Local Camera Device (used if VDO.ninja URL is empty)
           </label>
           <select
             id="deviceId"
             value={settings.deviceId || ""}
             onChange={(e) => handleChange("deviceId", e.target.value || null)}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-text focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            disabled={!settings.enabled}
+            disabled={!settings.enabled || !!settings.vdoNinjaUrl}
           >
             <option value="">Default Camera</option>
             {devices.map((device) => (

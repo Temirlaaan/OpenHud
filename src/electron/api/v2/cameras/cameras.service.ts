@@ -46,6 +46,10 @@ export const updateWebcamSettings = (
         fields.push("deviceId = ?");
         values.push(settings.deviceId);
       }
+      if (settings.vdoNinjaUrl !== undefined) {
+        fields.push("vdoNinjaUrl = ?");
+        values.push(settings.vdoNinjaUrl);
+      }
       if (settings.width !== undefined) {
         fields.push("width = ?");
         values.push(settings.width);

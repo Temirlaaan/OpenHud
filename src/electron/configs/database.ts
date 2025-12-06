@@ -136,6 +136,7 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
         id INTEGER PRIMARY KEY CHECK (id = 1),
         enabled INTEGER DEFAULT 0 CHECK (enabled IN (0, 1)),
         deviceId TEXT,
+        vdoNinjaUrl TEXT,
         width INTEGER DEFAULT 320,
         height INTEGER DEFAULT 240,
         positionX INTEGER DEFAULT 20,
@@ -154,8 +155,8 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
         } else {
           // Insert default settings if table is empty
           database.run(
-            `INSERT OR IGNORE INTO webcam_settings (id, enabled, deviceId, width, height, positionX, positionY, borderRadius, opacity, borderColor, borderWidth, zIndex)
-             VALUES (1, 0, NULL, 320, 240, 20, 20, 8, 1.0, '#ffffff', 2, 1000)`,
+            `INSERT OR IGNORE INTO webcam_settings (id, enabled, deviceId, vdoNinjaUrl, width, height, positionX, positionY, borderRadius, opacity, borderColor, borderWidth, zIndex)
+             VALUES (1, 0, NULL, NULL, 320, 240, 20, 20, 8, 1.0, '#ffffff', 2, 1000)`,
             (insertError) => {
               if (insertError) {
                 console.error("Error inserting default webcam settings:", insertError.message);
@@ -164,6 +165,14 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
           );
         }
       },
+    );
+
+    // Migration: Add vdoNinjaUrl column if it doesn't exist
+    database.run(
+      `ALTER TABLE webcam_settings ADD COLUMN vdoNinjaUrl TEXT`,
+      () => {
+        // Ignore error if column already exists
+      }
     );
 
     database.run(`
