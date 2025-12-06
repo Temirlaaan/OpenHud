@@ -47,6 +47,23 @@ interface Player {
   steamid: string;
   team: string;
   extra: Record<string, string>;
+  vdoNinjaStreamId?: string;
+}
+
+interface VdoNinjaSettings {
+  id: number;
+  enabled: boolean;
+  width: number;
+  height: number;
+  borderRadius: number;
+  opacity: number;
+  borderColor: string;
+  borderWidth: number;
+  transitionDuration: number;
+  showAvatarFallback: boolean;
+  cleanOutput: boolean;
+  autoplay: boolean;
+  muted: boolean;
 }
 
 interface Team {

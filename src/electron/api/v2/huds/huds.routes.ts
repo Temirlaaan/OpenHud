@@ -20,6 +20,12 @@ HudRoutes.get("/webcam.js", (__req, res) => {
   res.status(200).sendFile(webcamScriptPath);
 });
 
+// Serve VDO.Ninja script
+HudRoutes.get("/vdoninja.js", (__req, res) => {
+  const vdoNinjaScriptPath = path.join(__dirname, "../../../public/webcam/vdoninja.js");
+  res.status(200).sendFile(vdoNinjaScriptPath);
+});
+
 HudRoutes.get("/", (__req, res) => {
   const htmlPath = path.join(getHudPath(), "index.html");
 
@@ -50,6 +56,7 @@ HudRoutes.get("/", (__req, res) => {
         `
         <script src="/socket.io/socket.io.js"></script>
         <script src="/api/hud/webcam.js"></script>
+        <script src="/api/hud/vdoninja.js"></script>
         </body>
         `
       );

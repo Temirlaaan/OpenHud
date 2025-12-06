@@ -37,6 +37,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
   const [steamId, setSteamId] = useState("");
   const [team, setTeam] = useState("");
   const [country, setCountry] = useState("");
+  const [vdoNinjaStreamId, setVdoNinjaStreamId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [usernameError, setUsernameError] = useState("");
   const [steamIdError, setSteamIdError] = useState("");
@@ -52,6 +53,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
       setTeam(selectedPlayer.team || "");
       setCountry(selectedPlayer.country || "");
       setAvatar(selectedPlayer.avatar || "");
+      setVdoNinjaStreamId(selectedPlayer.vdoNinjaStreamId || "");
     } else if (open && prefill) {
       // Creating a new player with prefilled values
       setUsername(prefill.username || "");
@@ -62,6 +64,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
       setCountry("");
       setAvatar("");
       setAvatarFile(null);
+      setVdoNinjaStreamId("");
       setUsernameError("");
       setSteamIdError("");
       setSteamIdFormatError("");
@@ -75,6 +78,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
       setSteamId("");
       setTeam("");
       setCountry("");
+      setVdoNinjaStreamId("");
       setUsernameError("");
       setSteamIdError("");
       setSteamIdFormatError("");
@@ -119,6 +123,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
     formData.append("steamid", steamId);
     formData.append("team", team);
     formData.append("country", country);
+    formData.append("vdoNinjaStreamId", vdoNinjaStreamId);
     if (avatarFile) {
       formData.append("avatar", avatarFile); // Append the file
     } else if (selectedPlayer?.avatar) {
@@ -155,6 +160,7 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
     setSteamId("");
     setTeam("");
     setCountry("");
+    setVdoNinjaStreamId("");
     setUsernameError("");
     setSteamIdError("");
     setSteamIdFormatError("");
@@ -271,6 +277,47 @@ export const PlayerForm = ({ open, setOpen, prefill }: PlayerFormProps) => {
               {/* Display the selected file name */}
               {avatarFile && (
                 <span className="text-sm text-gray-500">{avatarFile.name}</span>
+              )}
+            </div>
+          </div>
+          {/* VDO.Ninja Stream ID Field */}
+          <div className="col-span-2">
+            <label
+              htmlFor="vdoNinjaStreamId"
+              className="mb-2 block font-medium text-text"
+            >
+              VDO.Ninja Stream ID
+            </label>
+            <TextInput
+              value={vdoNinjaStreamId}
+              onChange={(e) => setVdoNinjaStreamId(e.target.value)}
+              placeholder="player1cam or full URL"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Player should open: https://vdo.ninja/?push={vdoNinjaStreamId || "STREAM_ID"}&webcam&autostart
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const randomId = Math.random().toString(36).substring(2, 10);
+                  setVdoNinjaStreamId(randomId);
+                }}
+                className="rounded bg-gray-600 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-700"
+              >
+                Generate ID
+              </button>
+              {vdoNinjaStreamId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pushUrl = `https://vdo.ninja/?push=${vdoNinjaStreamId}&webcam&autostart`;
+                    navigator.clipboard.writeText(pushUrl);
+                  }}
+                  className="rounded bg-blue-600 px-3 py-1 text-sm text-white transition-colors hover:bg-blue-700"
+                >
+                  Copy Player Link
+                </button>
               )}
             </div>
           </div>
