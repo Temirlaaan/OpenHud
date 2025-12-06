@@ -1,5 +1,6 @@
 import { ButtonContained } from "../../components";
 import { WebcamSettingsComponent } from "./components/WebcamSettings";
+import { VdoNinjaSettingsComponent } from "./components/VdoNinjaSettings";
 
 export const Settings = () => {
 
@@ -15,6 +16,7 @@ export const Settings = () => {
         </div>
 
         <WebcamSettingsComponent />
+        <VdoNinjaSettingsComponent />
       </div>
     </div>
   );

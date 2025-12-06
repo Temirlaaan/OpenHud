@@ -51,6 +51,7 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
         steamid TEXT NOT NULL UNIQUE,
         team TEXT,
         extra TEXT,
+        vdoNinjaStreamId TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (team) REFERENCES teams(_id) ON DELETE SET NULL
@@ -58,6 +59,17 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
       (error) => {
         if (error) {
           console.error("Error creating players table:", error.message);
+        }
+      },
+    );
+
+    // Add vdoNinjaStreamId column to existing players table if it doesn't exist
+    database.run(
+      `ALTER TABLE players ADD COLUMN vdoNinjaStreamId TEXT`,
+      (error) => {
+        // Ignore error if column already exists
+        if (error && !error.message.includes("duplicate column name")) {
+          console.error("Error adding vdoNinjaStreamId column:", error.message);
         }
       },
     );
@@ -172,6 +184,52 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
     FOR EACH ROW
     BEGIN
         UPDATE webcam_settings SET updatedAt = CURRENT_TIMESTAMP WHERE id = OLD.id;
+    END;
+  `);
+
+    /* Create vdoninja_settings table for VDO.Ninja camera integration */
+    database.run(
+      `CREATE TABLE IF NOT EXISTS vdoninja_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        enabled INTEGER DEFAULT 0 CHECK (enabled IN (0, 1)),
+        width INTEGER DEFAULT 320,
+        height INTEGER DEFAULT 240,
+        borderRadius INTEGER DEFAULT 50,
+        opacity REAL DEFAULT 1.0 CHECK (opacity >= 0.0 AND opacity <= 1.0),
+        borderColor TEXT DEFAULT '#ffffff',
+        borderWidth INTEGER DEFAULT 2,
+        transitionDuration INTEGER DEFAULT 300,
+        showAvatarFallback INTEGER DEFAULT 1 CHECK (showAvatarFallback IN (0, 1)),
+        cleanOutput INTEGER DEFAULT 1 CHECK (cleanOutput IN (0, 1)),
+        autoplay INTEGER DEFAULT 1 CHECK (autoplay IN (0, 1)),
+        muted INTEGER DEFAULT 1 CHECK (muted IN (0, 1)),
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+      (error) => {
+        if (error) {
+          console.error("Error creating vdoninja_settings table:", error.message);
+        } else {
+          // Insert default settings if table is empty
+          database.run(
+            `INSERT OR IGNORE INTO vdoninja_settings (id, enabled, width, height, borderRadius, opacity, borderColor, borderWidth, transitionDuration, showAvatarFallback, cleanOutput, autoplay, muted)
+             VALUES (1, 0, 320, 240, 50, 1.0, '#ffffff', 2, 300, 1, 1, 1, 1)`,
+            (insertError) => {
+              if (insertError) {
+                console.error("Error inserting default vdoninja settings:", insertError.message);
+              }
+            }
+          );
+        }
+      },
+    );
+
+    database.run(`
+    CREATE TRIGGER IF NOT EXISTS update_vdoninja_settings_updatedAt
+    AFTER UPDATE ON vdoninja_settings
+    FOR EACH ROW
+    BEGIN
+        UPDATE vdoninja_settings SET updatedAt = CURRENT_TIMESTAMP WHERE id = OLD.id;
     END;
   `);
   });
