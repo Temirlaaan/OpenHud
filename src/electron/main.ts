@@ -22,12 +22,22 @@ app.on("ready", () => {
   ipcMainEvents(mainWindow);
 
   // Set up media permissions for webcam
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    // Allow media (camera/microphone) permissions
     if (permission === 'media') {
       callback(true);
     } else {
-      callback(false);
+      callback(true); // Allow other permissions too
     }
+  });
+
+  // Also set permission check handler for synchronous permission checks
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    // Allow media permissions for webcam overlay
+    if (permission === 'media') {
+      return true;
+    }
+    return true;
   });
 
   mainWindow.on("close", () => {
