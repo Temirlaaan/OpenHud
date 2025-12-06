@@ -31,15 +31,28 @@ HudRoutes.get("/", (__req, res) => {
       return;
     }
 
-    // Inject Socket.io and webcam script before closing body tag
-    const injectedHtml = html.replace(
-      "</body>",
-      `
-      <script src="/socket.io/socket.io.js"></script>
-      <script src="/api/hud/webcam.js"></script>
-      </body>
-      `
-    );
+    // Inject transparent background styles and scripts
+    const injectedHtml = html
+      .replace(
+        "</head>",
+        `
+        <style>
+          html, body, #root {
+            background: transparent !important;
+            background-color: transparent !important;
+          }
+        </style>
+        </head>
+        `
+      )
+      .replace(
+        "</body>",
+        `
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/api/hud/webcam.js"></script>
+        </body>
+        `
+      );
 
     res.status(200).send(injectedHtml);
   });

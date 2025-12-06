@@ -19,6 +19,8 @@ export function createHudWindow() {
     resizable: false,
     focusable: true,
     frame: false,
+    hasShadow: false,
+    backgroundColor: '#00000000',
     webPreferences: {
       preload: getPreloadPath(),
       backgroundThrottling: false,
