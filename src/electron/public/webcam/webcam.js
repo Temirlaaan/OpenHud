@@ -1,13 +1,16 @@
 // Webcam Overlay for OpenHud
+// Positions webcam over the observed player's avatar
 (function () {
   let webcamSettings = null;
   let videoElement = null;
   let containerElement = null;
   let mediaStream = null;
-  let isDragging = false;
-  let dragOffset = { x: 0, y: 0 };
+  let positionUpdateInterval = null;
 
   const API_URL = "http://localhost:1349";
+
+  // Avatar element selector - the observed player's avatar
+  const AVATAR_SELECTOR = ".observed_container .avatar_holder";
 
   // Initialize Socket.io client
   const socket = io(API_URL);
@@ -43,8 +46,8 @@
     try {
       const constraints = {
         video: {
-          width: { ideal: webcamSettings.width },
-          height: { ideal: webcamSettings.height },
+          width: { ideal: 320 },
+          height: { ideal: 320 },
           frameRate: { ideal: 30, max: 30 },
         },
       };
@@ -62,10 +65,11 @@
       videoElement.srcObject = mediaStream;
       videoElement.play();
 
-      applySettings();
+      // Start tracking avatar position
+      startPositionTracking();
     } catch (error) {
       console.error("Error starting webcam:", error);
-      showError("Camera access denied or unavailable");
+      showError("Camera access denied");
     }
   }
 
@@ -75,9 +79,11 @@
     containerElement.id = "webcam-overlay-container";
     containerElement.style.cssText = `
       position: fixed;
-      cursor: move;
-      user-select: none;
-      -webkit-user-select: none;
+      pointer-events: none;
+      z-index: 9999;
+      border-radius: 50%;
+      overflow: hidden;
+      display: none;
     `;
 
     // Create video element
@@ -91,56 +97,57 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      border-radius: 50%;
+      transform: scaleX(-1);
     `;
 
     containerElement.appendChild(videoElement);
     document.body.appendChild(containerElement);
-
-    // Add drag functionality
-    containerElement.addEventListener("mousedown", startDrag);
-    document.addEventListener("mousemove", drag);
-    document.addEventListener("mouseup", stopDrag);
   }
 
-  function startDrag(e) {
-    if (!containerElement) return;
-    isDragging = true;
-    const rect = containerElement.getBoundingClientRect();
-    dragOffset.x = e.clientX - rect.left;
-    dragOffset.y = e.clientY - rect.top;
-    containerElement.style.cursor = "grabbing";
+  function startPositionTracking() {
+    // Update position immediately
+    updatePosition();
+
+    // Clear existing interval if any
+    if (positionUpdateInterval) {
+      clearInterval(positionUpdateInterval);
+    }
+
+    // Update position every 100ms to follow avatar
+    positionUpdateInterval = setInterval(updatePosition, 100);
   }
 
-  function drag(e) {
-    if (!isDragging || !containerElement) return;
-    const x = e.clientX - dragOffset.x;
-    const y = e.clientY - dragOffset.y;
-    containerElement.style.left = `${x}px`;
-    containerElement.style.top = `${y}px`;
-  }
+  function updatePosition() {
+    if (!containerElement || !webcamSettings || !webcamSettings.enabled) {
+      return;
+    }
 
-  function stopDrag() {
-    if (!containerElement) return;
-    isDragging = false;
-    containerElement.style.cursor = "move";
-  }
+    const avatarElement = document.querySelector(AVATAR_SELECTOR);
 
-  function applySettings() {
-    if (!containerElement || !videoElement || !webcamSettings) return;
+    if (avatarElement) {
+      const rect = avatarElement.getBoundingClientRect();
 
-    containerElement.style.width = `${webcamSettings.width}px`;
-    containerElement.style.height = `${webcamSettings.height}px`;
-    containerElement.style.left = `${webcamSettings.positionX}px`;
-    containerElement.style.top = `${webcamSettings.positionY}px`;
-    containerElement.style.borderRadius = `${webcamSettings.borderRadius}px`;
-    containerElement.style.opacity = webcamSettings.opacity;
-    containerElement.style.border = `${webcamSettings.borderWidth}px solid ${webcamSettings.borderColor}`;
-    containerElement.style.zIndex = webcamSettings.zIndex;
-    containerElement.style.overflow = "hidden";
-    containerElement.style.display = webcamSettings.enabled ? "block" : "none";
+      // Position webcam exactly over the avatar
+      containerElement.style.left = `${rect.left}px`;
+      containerElement.style.top = `${rect.top}px`;
+      containerElement.style.width = `${rect.width}px`;
+      containerElement.style.height = `${rect.height}px`;
+      containerElement.style.display = "block";
+      containerElement.style.opacity = webcamSettings.opacity;
+      containerElement.style.border = `${webcamSettings.borderWidth}px solid ${webcamSettings.borderColor}`;
+    } else {
+      // Hide webcam if avatar not found (player not being observed)
+      containerElement.style.display = "none";
+    }
   }
 
   function stopWebcam() {
+    if (positionUpdateInterval) {
+      clearInterval(positionUpdateInterval);
+      positionUpdateInterval = null;
+    }
+
     if (mediaStream) {
       mediaStream.getTracks().forEach((track) => track.stop());
       mediaStream = null;
@@ -168,9 +175,10 @@
           background-color: rgba(0, 0, 0, 0.8);
           color: white;
           font-family: Arial, sans-serif;
-          font-size: 12px;
+          font-size: 10px;
           text-align: center;
-          padding: 10px;
+          padding: 5px;
+          border-radius: 50%;
         ">
           ${message}
         </div>
@@ -195,5 +203,5 @@
   });
 
   // Initialize
-  console.log("Webcam overlay script loaded");
+  console.log("Webcam overlay script loaded - will overlay on observed player avatar");
 })();
